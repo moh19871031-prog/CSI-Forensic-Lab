@@ -145,7 +145,7 @@ h1, h2, h3 { color: var(--secondary-color); text-shadow: var(--neon-glow); margi
 .report-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #ccc; font-size: 1.1rem; padding-bottom: 5px; }
 
 /* ---------------- CERTIFICATE STYLES ---------------- */
-.cert-container { width: 100%; max-width: 1000px; aspect-ratio: 1.414; background: linear-gradient(135deg, #fdfbf7, #e8e5df); border: 25px solid #1a252f; padding: 40px; text-align: center; position: relative; color: #111; display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 0 0 6px #b8974a, 0 0 60px rgba(255,215,0,0.25); box-sizing: border-box; }
+.cert-container { width: 100%; max-width: 1000px; aspect-ratio: 1.414; background: linear-gradient(135deg, #fdfbf7, #e8e5df); border: 25px solid #1a252f; padding: 40px; text-align: center; position: relative; color: #111; display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 0 0 6px #b8974a, 0 0 60px rgba(255,215,0,0.25); box-sizing: border-box; margin: auto; }
 .cert-inner { border: 3px solid #b8974a; outline: 2px solid #b8974a; outline-offset: 12px; height: 100%; padding: 30px 30px 140px 30px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); box-sizing: border-box; }
 .cert-title { font-family: 'Orbitron', 'Cairo', sans-serif; font-size: clamp(2.2rem, 4vw, 3rem); color: #8c6b2e; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid rgba(184, 151, 74, 0.3); padding-bottom: 10px; font-weight: 900; }
 .cert-name { font-size: clamp(2.5rem, 5vw, 3.8rem); color: #1a252f; font-weight: 900; margin: 25px 0; border-bottom: 3px double #b8974a; padding-bottom: 15px; width: 80%; text-align: center; }
@@ -205,17 +205,13 @@ input[type="text"]:focus { box-shadow: var(--neon-glow); background: rgba(0,0,0,
     .tape-text { font-size: 0.9rem; letter-spacing: 1px; padding: 2px 10px; }
 }
 
-/* ---------------- PRINT STYLES ---------------- */
+/* ---------------- REPORT PRINT STYLES ---------------- */
 @media print { 
-    @page { size: A4 landscape; margin: 0; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff !important; }
+    @page { size: A4 portrait; margin: 15mm; }
+    body, html { background: #fff !important; height: auto; overflow: visible; margin: 0; padding: 0; }
     body * { visibility: hidden; } 
-    #screen-certificate, #screen-certificate * { visibility: visible; } 
-    #screen-certificate { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; display: flex !important; align-items: center; justify-content: center; background: #fff !important; z-index: 9999; margin: 0; padding: 0; }
-    .cert-container { width: 100vw; height: 100vh; max-width: 297mm; max-height: 210mm; border: 20px solid #1a252f; border-width: 20px; box-shadow: none; margin: 0; padding: 15mm; transform: none; box-sizing: border-box; page-break-inside: avoid; aspect-ratio: auto; border-radius: 0; }
-    .cert-inner { padding: 15mm 15mm 40mm 15mm; outline-offset: -10px; }
-    .seal { bottom: 20mm; left: 20mm; box-shadow: none; width: 110px; height: 110px; font-size: 0.95rem; } 
-    .cert-footer { bottom: 20mm; right: 20mm; }
+    .screen.active .printable, .screen.active .printable * { visibility: visible; }
+    .screen.active .printable { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; }
     .btn, header { display: none !important; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
@@ -545,7 +541,7 @@ input[type="text"]:focus { box-shadow: var(--neon-glow); background: rgba(0,0,0,
 </div>
 
 <div id="screen-certificate" class="screen">
-<div class="cert-container printable" id="cert-content">
+<div class="cert-container" id="cert-content">
 <div class="cert-inner">
 <div class="cert-title">شهادة كفاءة جنائية</div>
 <div class="cert-text">يشهد مختبر الطب الشرعي التفاعلي بأن المحقق الموهوب</div>
@@ -713,7 +709,6 @@ e.target.classList.toggle('active-toggle');
 e.target.innerText = this.fx.muted ? '🔇' : '🔊';
 });
 
-// أزرار شاشة البداية ونافذة التعليمات
 b('btn-start-game', () => { this.resetState(); localStorage.removeItem('csi_save_v3'); this.startLoading(); });
 b('btn-resume-game', () => this.loadGame());
 
@@ -746,9 +741,119 @@ b('btn-next-suspects', () => this.initSuspects());
 b('btn-next-conclusion', () => this.initConclusion());
 b('btn-view-report', () => this.showReport());
 b('btn-print-report', () => window.print());
+
+// توليد صفحة الطباعة الاحترافية والمنفصلة للشهادة فقط
+b('btn-print-cert', () => {
+    const studentName = document.getElementById('cert-display-name').innerText;
+    const score = document.getElementById('cert-score').innerText;
+    const certId = document.getElementById('cert-id').innerText;
+    const certDate = document.getElementById('cert-date').innerText;
+
+    const printWin = window.open('', '_blank');
+    if(!printWin) {
+        alert('يرجى السماح بالنوافذ المنبثقة (Pop-ups) لطباعة الشهادة.');
+        return;
+    }
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+    <meta charset="UTF-8">
+    <title>طباعة الشهادة - ${studentName}</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@700&display=swap');
+    
+    @page { size: A4 landscape; margin: 10mm; }
+    
+    body, html { 
+        margin: 0; padding: 0; width: 100%; height: 100%; 
+        background: #fff; font-family: 'Cairo', sans-serif; 
+        -webkit-print-color-adjust: exact; print-color-adjust: exact; 
+        display: flex; justify-content: center; align-items: center; 
+        overflow: hidden; 
+    }
+    
+    .cert-container { 
+        width: 277mm; height: 190mm; 
+        background: linear-gradient(135deg, #fdfbf7, #e8e5df); 
+        border: 25px solid #1a252f; padding: 15mm; 
+        box-sizing: border-box; position: relative; color: #111; 
+        box-shadow: inset 0 0 0 6px #b8974a; 
+    }
+    
+    .cert-inner { 
+        border: 3px solid #b8974a; outline: 2px solid #b8974a; outline-offset: 10px; 
+        height: 100%; position: relative; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; 
+        background: rgba(255,255,255,0.5); box-sizing: border-box; padding: 20mm; 
+    }
+    
+    .cert-title { 
+        font-family: 'Orbitron', 'Cairo', sans-serif; font-size: 34pt; color: #8c6b2e; 
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1); text-transform: uppercase; letter-spacing: 2px; 
+        border-bottom: 2px solid rgba(184, 151, 74, 0.3); padding-bottom: 15px; 
+        font-weight: 900; position: absolute; top: 15mm; margin: 0; 
+    }
+    
+    .cert-text { font-size: 18pt; color: #333; line-height: 1.6; text-align: center; margin: 0; }
+    
+    .cert-name { 
+        font-size: 42pt; color: #1a252f; font-weight: 900; margin: 25px 0; 
+        border-bottom: 3px double #b8974a; padding-bottom: 10px; text-align: center; width: 80%; 
+    }
+    
+    .cert-footer { 
+        position: absolute; bottom: 15mm; right: 15mm; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; text-align: center; gap: 8px; 
+    }
+    
+    .seal { 
+        position: absolute; bottom: 15mm; left: 15mm; width: 120px; height: 120px; 
+        background: radial-gradient(circle, #d4af37, #aa8112); border-radius: 50%; 
+        display: flex; flex-direction: column; justify-content: center; align-items: center; 
+        color: #fff; font-weight: bold; border: 6px double #fff; 
+        box-shadow: inset 0 0 15px rgba(255,255,255,0.3); font-size: 11pt; text-align: center; 
+        font-family: 'Orbitron', 'Cairo', sans-serif; letter-spacing: 1px; line-height: 1.5; 
+    }
+    </style>
+    </head>
+    <body>
+        <div class="cert-container">
+            <div class="cert-inner">
+                <div class="cert-title">شهادة كفاءة جنائية</div>
+                <div class="cert-text">يشهد مختبر الطب الشرعي التفاعلي بأن المحقق الموهوب</div>
+                <div class="cert-name">${studentName}</div>
+                <div class="cert-text">قد أتم بنجاح مهمة الاستقصاء الجنائي وتحليل الأدلة المخبرية بمهارة علمية عالية،<br>وحصل على تقييم <span style="font-weight:bold;color:#b8974a;">${score}</span>.</div>
+                
+                <div class="cert-footer">
+                    <span style="color: #555; font-size: 12pt;">رقم الاعتماد</span>
+                    <span style="font-family:'Orbitron', monospace; font-weight:900; font-size: 16pt; color: #1a252f; border-bottom: 2px solid #b8974a; padding-bottom: 5px;">${certId}</span>
+                    <span style="color: #444; font-weight: bold; font-size: 12pt; margin-top:5px;">${certDate}</span>
+                </div>
+                
+                <div class="seal">مختبر الطب الشرعي<br><span style="font-size: 16pt; margin: 4px 0; display: block;">CSI</span>Certified</div>
+            </div>
+        </div>
+        <script>
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                    window.close();
+                }, 500);
+            };
+        <\/script>
+    </body>
+    </html>
+    `;
+
+    printWin.document.open();
+    printWin.document.write(htmlContent);
+    printWin.document.close();
+});
+
 b('btn-next-cert', () => this.switchScreen('screen-cert-input'));
 b('btn-generate-cert', () => this.generateCert());
-b('btn-print-cert', () => window.print());
 
 const apps = [
 {id:'app-msg', txt:"رسائل مشفرة:<br>> الجاني: سأنهي بحثك اليوم.<br>> الضحية: لن تستطيع أخذها!"},
@@ -826,13 +931,11 @@ area.querySelectorAll('.evidence-item').forEach(el => {
 });
 };
 
-// دعم الفأرة
 area.addEventListener('mousemove', e => updateLight(e.clientX, e.clientY));
 
-// دعم اللمس للكشاف
 const updateLightTouch = (e) => {
     if(e.touches.length > 0) {
-        if(e.type === 'touchmove') e.preventDefault(); // منع التمرير على الجوال
+        if(e.type === 'touchmove') e.preventDefault();
         updateLight(e.touches[0].clientX, e.touches[0].clientY);
     }
 };
@@ -1043,7 +1146,7 @@ const handleStart = (e) => {
 
 const handleMove = (e) => {
     if(!isDragging) return;
-    if(e.type === 'touchmove') e.preventDefault(); // منع التمرير التلقائي أثناء السحب
+    if(e.type === 'touchmove') e.preventDefault(); 
     const evt = e.touches ? e.touches[0] : e;
     let dx = evt.clientX - startX; let dy = evt.clientY - startY;
     let nx = initX + dx; let ny = initY + dy;
@@ -1058,12 +1161,10 @@ const handleEnd = (e) => {
     if(e.type === 'pointerup') d.releasePointerCapture(e.pointerId);
 };
 
-// دعم أحداث المؤشر والفأرة
 d.addEventListener('pointerdown', handleStart);
 d.addEventListener('pointermove', handleMove);
 d.addEventListener('pointerup', handleEnd);
 
-// دعم مباشر لأحداث اللمس لضمان التوافق مع الهواتف
 d.addEventListener('touchstart', handleStart, {passive: false});
 d.addEventListener('touchmove', handleMove, {passive: false});
 d.addEventListener('touchend', handleEnd);
